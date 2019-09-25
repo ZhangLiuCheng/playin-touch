@@ -1,11 +1,8 @@
 package com.tech.playin.control;
 
-import android.app.Instrumentation;
-import android.content.Context;
-import android.os.Looper;
 import android.os.SystemClock;
-import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.InputDevice;
 import android.view.MotionEvent;
 
 import org.json.JSONException;
@@ -17,40 +14,9 @@ import java.util.List;
 
 public class InjectEvents {
 
-    public static void testDefaultEvents(final Context context) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                DisplayMetrics dm = context.getResources().getDisplayMetrics();
-                int width = dm.widthPixels;
-                int height = dm.heightPixels;
-                String str = "{\"0\":\"0.621333_0.511994_0_0_0\",\"1\":\"0.697333_0.695652_0_0_0\",\"2\":\"0.306667_0.472264_0_0_0\"}";
-                testInjectEvents(width, height, str);
-            }
-        }).start();
-    }
-
-    public static void testInjectEvents(float destWidth, float destHeight, String controlStr) {
-        final List<MotionEvent> mes = parseMotionEvents(destWidth, destHeight, controlStr);
-        final Instrumentation inst = new Instrumentation();
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < mes.size(); i++) {
-                    inst.sendPointerSync(mes.get(i));
-                }
-            }
-        };
-        if (Looper.getMainLooper() == Looper.myLooper()) {
-            new Thread(runnable).start();
-        } else {
-            runnable.run();
-        }
-    }
-
     /**
      * 将服务器触摸手势转成MotionEvents。
-     * @param destWidth 目标宽
+     * @param destWidth  目标宽
      * @param destHeight 目标高
      * @param controlStr 触控事件字符串
      * @return
@@ -79,22 +45,71 @@ public class InjectEvents {
 
     private static MotionEvent convertStrToMotionEvent(float destWidth, float destHeight, String value) {
         String[] commands = value.split("_");
-//        int action = -1;
-//        switch (Integer.parseInt(commands[2])) {
-//            case 0:
-//                action = MotionEvent.ACTION_DOWN;
-//                break;
-//            case 1:
-//                action = MotionEvent.ACTION_MOVE;
-//                break;
-//            case 2:
-//                action = MotionEvent.ACTION_UP;
-//                break;
-//            default:
-//                break;
-//        }
-        int action = Integer.parseInt(commands[2]);
+        int action = -1;
+        switch (Integer.parseInt(commands[2])) {
+            case 0:
+                action = MotionEvent.ACTION_DOWN;
+                break;
+            case 1:
+                action = MotionEvent.ACTION_MOVE;
+                break;
+            case 2:
+                action = MotionEvent.ACTION_UP;
+                break;
+            default:
+                break;
+        }
         return MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), action,
                 Float.parseFloat(commands[0]) * destWidth, Float.parseFloat(commands[1]) * destHeight, 0);
+    }
+
+
+    /**
+     * 将服务器触摸手势转成MotionEvents,包括多点触控功能。
+     * @param destWidth
+     * @param destHeight
+     * @param controlStr
+     * @return MotionEvent。如果格式不标准，有可能返回null。
+     */
+    public static MotionEvent parseMotionEventsMultipoint(float destWidth, float destHeight, String controlStr) {
+        try {
+            JSONObject obj = new JSONObject(controlStr);
+            int pointerCount = obj.length();
+            MotionEvent.PointerProperties[] properties = new MotionEvent.PointerProperties[pointerCount];
+            MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[pointerCount];
+            int action = 0;
+            int index = 0;
+            Iterator it = obj.keys();
+            while (it.hasNext()) {
+                String key = it.next().toString();
+                String value = obj.optString(key);
+                String[] commands = value.split("_");
+                float x = Float.parseFloat(commands[0]) * destWidth;
+                float y = Float.parseFloat(commands[1]) * destHeight;
+                action = Integer.parseInt(commands[2]);
+
+                // 兼容ios
+                if (action == 1) {
+                    action = 2;
+                } else if (action == 2) {
+                    action = 1;
+                }
+
+                MotionEvent.PointerProperties pp = new MotionEvent.PointerProperties();
+                pp.id = Integer.parseInt(key);
+                properties[index] = pp;
+                MotionEvent.PointerCoords pc = new MotionEvent.PointerCoords();
+                pc.x = x;
+                pc.y = y;
+                coords[index] = pc;
+                index++;
+            }
+            MotionEvent event = MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), action, pointerCount, properties,
+                    coords, 0, 0, 1, 1, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+            return event;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return null;
     }
 }

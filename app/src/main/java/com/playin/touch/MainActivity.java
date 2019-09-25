@@ -1,33 +1,25 @@
 package com.playin.touch;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.app.Instrumentation;
 import android.os.Bundle;
-import android.os.SystemClock;
-import android.util.Log;
-import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.View;
 
-
+import androidx.appcompat.app.AppCompatActivity;
+import com.tech.playin.control.InjectEvents;
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "TAG";
-    private final StringBuilder controlBuilder = new StringBuilder();
+    private List<String> touches = new ArrayList<>();
+
     private int width;
     private int height;
     private boolean flag;
-    private List<String> touches = new ArrayList<>();
-
-    private List<GameEvent> gameEvents = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,69 +32,18 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 flag = true;
-//                for (int i = 0; i < touches.size(); i++) {
-//                    InjectEvents.testInjectEvents(width, height,touches.get(i));
-//                }
-//                InjectEvents.testDefaultEvents(MainActivity.this);
-
                 final Instrumentation inst = new Instrumentation();
-
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
                         for (int i = 0; i < touches.size(); i++) {
-                            try {
-                                Thread.sleep(10);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-//                            GameEvent ge = gameEvents.get(i);
-//                            MotionEvent event = MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), ge.action, ge.pointerCount,
-//                                    ge.properties, ge.coords, 0, 0, 1, 1, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
-//                            inst.sendPointerSync(event);
+//                            List<MotionEvent> event = InjectEvents.parseMotionEvents(width, height, touches.get(i));
+//                            for (int j = 0; j < event.size(); j ++) {
+//                                inst.sendPointerSync(event.get(j));
+//                            }
 
-                            try {
-                                JSONObject obj = new JSONObject(touches.get(i));
-                                int pointerCount = obj.length();
-                                int action = 0;
-
-                                MotionEvent.PointerProperties[] properties = new MotionEvent.PointerProperties[pointerCount];
-                                MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[pointerCount];
-
-                                int index = 0;
-                                Iterator it = obj.keys();
-                                while (it.hasNext()) {
-                                    String key = it.next().toString();
-                                    String value = obj.optString(key);
-                                    String[] commands = value.split("_");
-                                    float x = Float.parseFloat(commands[0]) * width;
-                                    float y = Float.parseFloat(commands[1]) * height;
-                                    action = Integer.parseInt(commands[2]);
-
-                                    // 兼容ios
-                                    if (action == 1) {
-                                        action = 2;
-                                    } else if (action == 2) {
-                                        action = 1;
-                                    }
-
-                                    MotionEvent.PointerProperties pp = new MotionEvent.PointerProperties();
-                                    pp.id = Integer.parseInt(key);
-                                    properties[index] = pp;
-
-                                    MotionEvent.PointerCoords pc = new MotionEvent.PointerCoords();
-                                    pc.x = x;
-                                    pc.y = y;
-                                    coords[index] = pc;
-                                    index++;
-                                }
-
-                                MotionEvent event = MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), action, pointerCount,
-                                        properties, coords, 0, 0, 1, 1, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
-                                inst.sendPointerSync(event);
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
+                            MotionEvent event = InjectEvents.parseMotionEventsMultipoint(width, height, touches.get(i));
+                            inst.sendPointerSync(event);
                         }
                     }
                 }).start();
@@ -136,11 +77,10 @@ public class MainActivity extends AppCompatActivity {
     public boolean onTouchEvent(MotionEvent event) {
         if (flag) return true;
 
-        int action = event.getActionMasked();  // 0 down, 1 up, 2 move
+        int action = event.getActionMasked();
         int pointerCount = event.getPointerCount();
         MotionEvent.PointerProperties[] pps = new MotionEvent.PointerProperties[pointerCount];
         MotionEvent.PointerCoords[] pcs = new MotionEvent.PointerCoords[pointerCount];
-
         for (int i = 0; i < pointerCount; i ++) {
             MotionEvent.PointerProperties pp = new MotionEvent.PointerProperties();
             event.getPointerProperties(i, pp);
@@ -157,13 +97,10 @@ public class MainActivity extends AppCompatActivity {
         } else if (action == 2) {
             action = 1;
         }
-
         gameEvent.action = action;
         gameEvent.pointerCount = pointerCount;
         gameEvent.properties = pps;
         gameEvent.coords = pcs;
-//        gameEvents.add(gameEvent);
-
         String conStr = convertGameEvent(gameEvent);
         touches.add(conStr);
 
@@ -186,16 +123,5 @@ public class MainActivity extends AppCompatActivity {
         sendControl(event.getActionIndex(), controlBuilder.toString());
          */
         return true;
-    }
-
-    private void sendControl(int finger, String control) {
-        try {
-            JSONObject obj = new JSONObject();
-            obj.put("" + finger, control);
-            Log.e(TAG, obj.toString());
-            touches.add(obj.toString());
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
     }
 }
