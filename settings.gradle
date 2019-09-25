@@ -1,0 +1,2 @@
+include ':app', 'playincontrol'
+rootProject.name='PlayINTouch'
