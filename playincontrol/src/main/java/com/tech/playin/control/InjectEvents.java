@@ -79,20 +79,21 @@ public class InjectEvents {
 
     private static MotionEvent convertStrToMotionEvent(float destWidth, float destHeight, String value) {
         String[] commands = value.split("_");
-        int action = -1;
-        switch (Integer.parseInt(commands[2])) {
-            case 0:
-                action = MotionEvent.ACTION_DOWN;
-                break;
-            case 1:
-                action = MotionEvent.ACTION_MOVE;
-                break;
-            case 2:
-                action = MotionEvent.ACTION_UP;
-                break;
-            default:
-                break;
-        }
+//        int action = -1;
+//        switch (Integer.parseInt(commands[2])) {
+//            case 0:
+//                action = MotionEvent.ACTION_DOWN;
+//                break;
+//            case 1:
+//                action = MotionEvent.ACTION_MOVE;
+//                break;
+//            case 2:
+//                action = MotionEvent.ACTION_UP;
+//                break;
+//            default:
+//                break;
+//        }
+        int action = Integer.parseInt(commands[2]);
         return MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), action,
                 Float.parseFloat(commands[0]) * destWidth, Float.parseFloat(commands[1]) * destHeight, 0);
     }
