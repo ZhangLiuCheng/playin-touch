@@ -16,26 +16,6 @@ import static android.view.MotionEvent.ACTION_POINTER_UP;
 
 public class InjectEvents {
 
-    private static class Touch {
-        String fId;
-        float coordX;
-        float coordY;
-        int action;
-
-        public Touch(String fId, float coordX, float coordY, int action) {
-            this.fId = fId;
-            this.coordX = coordX;
-            this.coordY = coordY;
-            this.action = action;
-        }
-    }
-
-    private static void modifyTouchAction(List<Touch> touches, int action) {
-        for (int i = 0; i < touches.size(); i++) {
-            touches.get(i).action = action;
-        }
-    }
-
     /**
      * 将服务器触摸手势转成MotionEvents,包括多点触控功能。
      * @param destWidth
@@ -117,5 +97,25 @@ public class InjectEvents {
         }
         return MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), action, pointerCount, properties,
                 coords, 0, 0, 1, 1, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
+    }
+
+    private static void modifyTouchAction(List<Touch> touches, int action) {
+        for (int i = 0; i < touches.size(); i++) {
+            touches.get(i).action = action;
+        }
+    }
+
+    private static class Touch {
+        String fId;
+        float coordX;
+        float coordY;
+        int action;
+
+        public Touch(String fId, float coordX, float coordY, int action) {
+            this.fId = fId;
+            this.coordX = coordX;
+            this.coordY = coordY;
+            this.action = action;
+        }
     }
 }
